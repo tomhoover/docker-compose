@@ -1,0 +1,137 @@
+# vim: set ft=dosini
+---
+version: "3"
+services:
+  letsencrypt:
+    image: linuxserver/letsencrypt
+    container_name: le
+    ports:
+      - 443:443
+    volumes:
+      - /opt/appdata/letsencrypt:/config
+    restart: always
+    depends_on:
+      - plexpy
+      - grafana
+      - nzbget
+      - sonarr
+      - radarr
+      - headphones
+      - airsonic
+      - smokeping
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - EMAIL=blah@zay.com
+      - URL=blah.com
+      - SUBDOMAINS=sub
+      - ONLY_SUBDOMAINS=true
+      - DHLEVEL=4096
+      - TZ=Europe/London
+  plex:
+    image: plexinc/pms-docker
+    container_name: plex
+    volumes:
+      - /opt/appdata/plex:/config
+      - /mnt/storage:/data
+    network_mode: host
+    restart: always
+    environment:
+      - PLEX_CLAIM="claim" 
+      - PUID=${PUID}
+      - PGID=${PGID}
+  plexpy:
+    image: linuxserver/plexpy
+    container_name: plexpy
+    depends_on:
+      - plex
+    volumes:
+      - /opt/appdata/plexpy:/config
+      - /opt/appdata/plex/Library/Application\ Support/Plex\ Media\ Server/Logs:/logs:ro
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    ports:
+      - 8086:8086
+    volumes:
+      - /opt/appdata/influxdb:/var/lib/influxdb
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    environment:
+      - "GF_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+    volumes:
+      - /opt/appdata/grafana/data:/var/lib/grafana
+      - /opt/appdata/grafana/config/grafana.ini:/etc/grafana/grafana.ini
+    restart: unless-stopped
+  nzbget:
+    image: linuxserver/nzbget
+    container_name: nzbget
+    volumes:
+      - /opt/appdata/nzbget/config:/config
+      - /opt/downloads:/downloads
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    depends_on:
+      - nzbget
+    volumes:
+      - /opt/appdata/sonarr:/config
+      - /mnt/storage/tv:/tv
+      - /opt/downloads/complete/tv:/downloads/complete/tv
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    volumes:
+      - /opt/appdata/radarr:/config
+      - /mnt/storage/movies:/movies
+      - /opt/appdata/complete/movies:/downloads
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    restart: unless-stopped
+  headphones:
+    image: linuxserver/headphones
+    container_name: headphones
+    volumes:
+      - /opt/appdata/headphones:/config
+      - /mnt/storage/music/flac:/music
+      - /opt/downloads/complete/music:/downloads
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    restart: unless-stopped
+  airsonic:
+    image: linuxserver/airsonic
+    container_name: airsonic
+    volumes:
+      - /opt/appdata/airsonic:/config
+      - /mnt/storage/music/flac:/music/flac
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - CONTEXT_PATH=sonic
+    restart: unless-stopped
+  smokeping:
+    image: linuxserver/smokeping
+    container_name: smokeping
+    volumes:
+      - /opt/appdata/smokeping/config:/config
+      - /opt/appdata/smokeping/data:/data
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+    restart: unless-stopped
